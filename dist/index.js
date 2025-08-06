@@ -9,10 +9,6 @@ var __export = (target, all) => {
 };
 
 // vite.config.ts
-var vite_config_exports = {};
-__export(vite_config_exports, {
-  default: () => vite_config_default
-});
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -53,8 +49,152 @@ var init_vite_config = __esm({
   }
 });
 
-// server/index.ts
+// server/vite-dev.ts
+var vite_dev_exports = {};
+__export(vite_dev_exports, {
+  setupViteDev: () => setupViteDev
+});
+import fs from "fs";
+import path2 from "path";
+import { createServer as createViteServer, createLogger } from "vite";
+import { nanoid } from "nanoid";
+async function setupViteDev(app2, server) {
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true
+  };
+  const vite = await createViteServer({
+    ...vite_config_default,
+    configFile: false,
+    customLogger: {
+      ...viteLogger,
+      error: (msg, options) => {
+        viteLogger.error(msg, options);
+        process.exit(1);
+      }
+    },
+    server: serverOptions,
+    appType: "custom"
+  });
+  app2.use(vite.middlewares);
+  app2.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      const clientTemplate = path2.resolve(
+        import.meta.dirname,
+        "..",
+        "client",
+        "index.html"
+      );
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+}
+var viteLogger;
+var init_vite_dev = __esm({
+  async "server/vite-dev.ts"() {
+    "use strict";
+    await init_vite_config();
+    viteLogger = createLogger();
+  }
+});
+
+// server/vite.ts
+var vite_exports = {};
+__export(vite_exports, {
+  log: () => log,
+  serveStatic: () => serveStatic,
+  setupVite: () => setupVite
+});
+import express from "express";
+import fs2 from "fs";
+import path3 from "path";
+function log(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+async function setupVite(app2, server) {
+  if (process.env.NODE_ENV !== "development") {
+    throw new Error("setupVite should only be called in development mode");
+  }
+  const { setupViteDev: setupViteDev2 } = await init_vite_dev().then(() => vite_dev_exports);
+  return setupViteDev2(app2, server);
+}
+function serveStatic(app2) {
+  const distPath = path3.resolve(import.meta.dirname, "..", "dist", "public");
+  if (!fs2.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express.static(distPath));
+  app2.use("*", (_req, res) => {
+    res.sendFile(path3.resolve(distPath, "index.html"));
+  });
+}
+var init_vite = __esm({
+  "server/vite.ts"() {
+    "use strict";
+  }
+});
+
+// server/vite-prod.ts
+var vite_prod_exports = {};
+__export(vite_prod_exports, {
+  log: () => log2,
+  serveStatic: () => serveStatic2,
+  setupVite: () => setupVite2
+});
 import express2 from "express";
+import fs3 from "fs";
+import path4 from "path";
+function log2(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+async function setupVite2(app2, server) {
+  throw new Error("setupVite should only be called in development mode");
+}
+function serveStatic2(app2) {
+  const distPath = path4.resolve(import.meta.dirname, "..", "dist", "public");
+  if (!fs3.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express2.static(distPath));
+  app2.use("*", (_req, res) => {
+    res.sendFile(path4.resolve(distPath, "index.html"));
+  });
+}
+var init_vite_prod = __esm({
+  "server/vite-prod.ts"() {
+    "use strict";
+  }
+});
+
+// server/index.ts
+import express3 from "express";
 
 // server/routes.ts
 import { createServer } from "http";
@@ -268,88 +408,27 @@ async function registerRoutes(app2) {
   return httpServer;
 }
 
-// server/vite.ts
-import express from "express";
-import fs from "fs";
-import path2 from "path";
-function log(message, source = "express") {
-  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
-async function setupVite(app2, server) {
-  if (process.env.NODE_ENV !== "development") {
-    throw new Error("setupVite should only be called in development mode");
-  }
-  const { createServer: createViteServer, createLogger } = await import("vite");
-  const viteConfig = (await init_vite_config().then(() => vite_config_exports)).default;
-  const { nanoid } = await import("nanoid");
-  const viteLogger = createLogger();
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
-  const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      }
-    },
-    server: serverOptions,
-    appType: "custom"
-  });
-  app2.use(vite.middlewares);
-  app2.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path2.resolve(
-        import.meta.dirname,
-        "..",
-        "client",
-        "index.html"
-      );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-}
-function serveStatic(app2) {
-  const distPath = path2.resolve(import.meta.dirname, "..", "dist", "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-  app2.use(express.static(distPath));
-  app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
-  });
-}
-
 // server/index.ts
-var app = express2();
-app.use(express2.json());
-app.use(express2.urlencoded({ extended: false }));
+var setupVite3;
+var serveStatic3;
+var log3;
+if (process.env.NODE_ENV === "development") {
+  const viteModule = await Promise.resolve().then(() => (init_vite(), vite_exports));
+  setupVite3 = viteModule.setupVite;
+  serveStatic3 = viteModule.serveStatic;
+  log3 = viteModule.log;
+} else {
+  const viteModule = await Promise.resolve().then(() => (init_vite_prod(), vite_prod_exports));
+  setupVite3 = viteModule.setupVite;
+  serveStatic3 = viteModule.serveStatic;
+  log3 = viteModule.log;
+}
+var app = express3();
+app.use(express3.json());
+app.use(express3.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const start = Date.now();
-  const path3 = req.path;
+  const path5 = req.path;
   let capturedJsonResponse = void 0;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -358,15 +437,15 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path3.startsWith("/api")) {
-      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
+    if (path5.startsWith("/api")) {
+      let logLine = `${req.method} ${path5} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "\u2026";
       }
-      log(logLine);
+      log3(logLine);
     }
   });
   next();
@@ -380,9 +459,9 @@ app.use((req, res, next) => {
     throw err;
   });
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    await setupVite3(app, server);
   } else {
-    serveStatic(app);
+    serveStatic3(app);
   }
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen({
@@ -390,6 +469,6 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true
   }, () => {
-    log(`serving on port ${port}`);
+    log3(`serving on port ${port}`);
   });
 })();

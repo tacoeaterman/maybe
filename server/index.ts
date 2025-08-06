@@ -1,6 +1,22 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+
+// Import vite functions based on environment
+let setupVite: any;
+let serveStatic: any;
+let log: any;
+
+if (process.env.NODE_ENV === "development") {
+  const viteModule = await import("./vite");
+  setupVite = viteModule.setupVite;
+  serveStatic = viteModule.serveStatic;
+  log = viteModule.log;
+} else {
+  const viteModule = await import("./vite-prod");
+  setupVite = viteModule.setupVite;
+  serveStatic = viteModule.serveStatic;
+  log = viteModule.log;
+}
 
 const app = express();
 app.use(express.json());
