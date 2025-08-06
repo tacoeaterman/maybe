@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kicked in the Disc</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 90%;
+            max-width: 1200px;
+            min-height: 600px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #555;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .players-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .player-item.host {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .hole-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .score-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .score-input input {
+            width: 80px;
+            text-align: center;
+        }
+
+        .winner-display {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .leaderboard {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .store-item {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .store-item.purchased {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .card-category {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .card-description {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .game-activity {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .card-played {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                padding: 20px;
+            }
+            
+            .cards-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .card {
+                width: 90%;
+                margin: 5px;
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="screen active">
+            <div class="loading">
+                <h1>🥏 Kicked in the Disc</h1>
+                <p>Initializing Firebase...</p>
+            </div>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="loginScreen" class="screen">
+            <h1>🥏 Kicked in the Disc</h1>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            <div class="button-group">
+                <button onclick="loginWithEmail()">Login</button>
+                <button onclick="showCreateAccount()">Create Account</button>
+            </div>
+        </div>
+
+        <!-- Create Account Screen -->
+        <div id="createAccountScreen" class="screen">
+            <h1>Create Account</h1>
+            <div class="form-group">
+                <label for="newEmail">Email:</label>
+                <input type="email" id="newEmail" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="displayName">Display Name:</label>
+                <input type="text" id="displayName" placeholder="Choose a display name">
+            </div>
+            <div class="form-group">
+                <label for="newPassword">Password:</label>
+                <input type="password" id="newPassword" placeholder="Choose a password (min 6 characters)">
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password:</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm your password">
+            </div>
+            <div class="button-group">
+                <button onclick="createAccount()">Create Account</button>
+                <button onclick="showLogin()">Back to Login</button>
+            </div>
+        </div>
+
+        <!-- Main Menu Screen -->
+        <div id="mainMenuScreen" class="screen">
+            <h1>Main Menu</h1>
+            <div class="status-bar">
+                <p>Welcome, <span id="currentUser"></span>!</p>
+                <p>Hosting Privilege: <span id="hostingStatus">❌ Not Purchased</span></p>
+            </div>
+            <div class="button-group">
+                <button id="hostButton" onclick="showHostScreen()" disabled>Host Game</button>
+                <button onclick="showJoinScreen()">Join Game</button>
+                <button onclick="showStore()">Store</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Store Screen -->
+        <div id="storeScreen" class="screen">
+            <h1>Store</h1>
+            <div class="store-item" id="hostingPrivilege">
+                <h3>Game Hosting Privilege</h3>
+                <p>Unlock the ability to host games for up to 6 players</p>
+                <p><strong>Price: $9.99</strong></p>
+                <button onclick="purchaseHosting()">Purchase</button>
+            </div>
+            <button onclick="showMainMenu()">Back to Main Menu</button>
+        </div>
+
+        <!-- Host Game Screen -->
+        <div id="hostScreen" class="screen">
+            <h1>Host Game</h1>
+            <div class="form-group">
+                <label for="holes">Number of Holes (1-24):</label>
+                <input type="number" id="holes" min="1" max="24" value="18">
+            </div>
+            <button onclick="createGame()">Create Game</button>
+            <button onclick="showMainMenu()">Back</button>
+        </div>
+
+        <!-- Join Game Screen -->
+        <div id="joinScreen" class="screen">
+            <h1>Join Game</h1>
+            <div class="form-group">
+                <label for="gameCode">Game Code:</label>
+                <input type="text" id="gameCode" placeholder="Enter game code" style="text-transform: uppercase;">
+            </div>
+            <button onclick="joinGame()">Join Game</button>
+            <button onclick="showMainMenu()">Back</button>
+        </div>
+
+        <!-- Lobby Screen -->
+        <div id="lobbyScreen" class="screen">
+            <h1>Game Lobby</h1>
+            <div class="status-bar">
+                <p>Game Code: <strong id="currentGameCode"></strong></p>
+                <p>Players: <span id="playerCount">1</span>/6</p>
+                <p>Holes: <span id="gameHoles"></span></p>
+            </div>
+            <div class="players-list" id="playersList"></div>
+            <div class="button-group" id="lobbyButtons">
+                <button id="startGameButton" onclick="startGame()" style="display:none;">Start Game</button>
+                <button onclick="leaveGame()">Leave Game</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="screen">
+            <div class="status-bar">
+                <div class="hole-info">
+                    <div>Hole: <span id="currentHole">1</span>/<span id="totalHoles">18</span></div>
+                    <div>Par: <span id="currentPar">3</span></div>
+                    <div id="hostParControls" style="display:none;">
+                        <input type="number" id="parInput" min="1" max="6" value="3">
+                        <button onclick="setPar()">Set Par</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <div id="leaderboardList"></div>
+            </div>
+
+            <div id="gameActivity" style="max-height: 150px; overflow-y: auto; margin: 10px 0;">
+                <h4>Game Activity</h4>
+                <div id="activityLog"></div>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <h3>Your Hand (<span id="cardsInHand">5</span> cards)</h3>
+                <div class="cards-container" id="playerCards"></div>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <h3>Play Cards</h3>
+                <button onclick="playSelectedCards()" id="playCardsButton" disabled>Play Selected Cards</button>
+                <button onclick="skipCardPlay()">Skip Playing Cards</button>
+            </div>
+
+            <div class="score-input">
+                <label>Your Score for this Hole:</label>
+                <input type="number" id="holeScore" min="1" max="20" value="3">
+                <button onclick="submitScore()">Submit Score</button>
+            </div>
+
+            <div class="button-group">
+                <button id="nextHoleButton" onclick="nextHole()" style="display:none;">Next Hole</button>
+                <button id="endGameButton" onclick="endGame()" style="display:none;">End Game</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen">
+            <h1>Game Over!</h1>
+            <div class="winner-display" id="winnerDisplay"></div>
+            <div class="leaderboard">
+                <h3>Final Scores</h3>
+                <div id="finalScores"></div>
+            </div>
+            <button onclick="showMainMenu()">Back to Main Menu</button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Firebase Configuration (Replace with your Firebase config)
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com/",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "your-sender-id",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        const functions = firebase.functions();
+
+        // Game State
+        let currentUser = null;
+        let hasHostingPrivilege = false;
+        let currentGameRef = null;
+        let gameState = {
+            isHost: false,
+            gameCode: '',
+            gameId: '',
+            players: {},
+            totalHoles: 18,
+            currentHole: 1,
+            currentPar: 3,
+            playerHand: [],
+            selectedCards: [],
+            scores: {},
+            deck: [],
+            discardPile: [],
+            gamePhase: 'lobby', // lobby, playing, scoring, finished
+            waitingForScores: {},
+            gameActivity: []
+        };
+
+        // Card Database
+        const cardDatabase = {
+            beforeThrow: [
+                { name: "The Stranger", description: "Make an opponent throw their next throw with their offhand.", count: 4 },
+                { name: "Shrink Ray", description: "Make an opponent throw a mini on their next throw", count: 4 },
+                { name: "Because I said So", description: "Make a mando all other players must make. (mando must be on current hole)", count: 4 },
+                { name: "I'm you silly", description: "Take an opponents throw for them.", count: 4 },
+                { name: "Is that what your throwing", description: "Make an opponent throw a disc of your choosing from yours or theirs bag.", count: 4 }
+            ],
+            afterThrow: [
+                { name: "Gremlins", description: "Move an opponents disc 10 paces in any direction.", count: 4 },
+                { name: "Thats my disc", description: "swap lye's with an opponent.", count: 4 },
+                { name: "Merely a Flesh wound", description: "Make all opponents throw from their knee's(both knee's must be touching the ground)", count: 4 },
+                { name: "Thats not Fair", description: "Make an opponent rethrow last throw and take worst lye.", count: 4 },
+                { name: "Instant replay", description: "Make all opponents rethrow last throw and take the worst lye.", count: 4 }
+            ],
+            self: [
+                { name: "I'm rubber your glue", description: "reflects a card played on you back at the person who played it.", count: 4 },
+                { name: "I reject your reality", description: "Redirects a card played on you to another opponent.", count: 4 },
+                { name: "It was here I swear", description: "Move your disc 10 paces in any direction.", count: 4 },
+                { name: "Mulligan", description: "Rethrow last throw and take best lye.", count: 4 },
+                { name: "Seeing double", description: "Putt twice take the best lye.", count: 4 }
+            ],
+            wild: [
+                { name: "Jealousy", description: "Change scorecards with an opponent of your choosing(if this card is reflected back at you. You automatically trade score cards with player in last place. if you are in last place current hole will be scored as a +3 to your score.", count: 1 },
+                { name: "I need some space", description: "Move your disc 10 paces closer to the basket and all other players must move theirs 10 further away from the basket.", count: 1 },
+                { name: "Hear it ring", description: "If your disc hits metal it counts as in the basket.", count: 1 },
+                { name: "Whats par again", description: "add plus 1 to par for you and -1 to par for all opponents on this hole.", count: 1 },
+                { name: "Ace run", description: "Next throw counts as an ace.", count: 1 }
+            ]
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            // Listen for authentication state changes
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    currentUser = user;
+                    loadUserData();
+                } else {
+                    currentUser = null;
+                    showScreen('loginScreen');
+                }
+                // Hide loading screen once auth state is determined
+                document.getElementById('loadingScreen').classList.remove('active');
+            });
+        });
+
+        // Utility Functions
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${isError ? 'error' : ''} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function generateGameCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function shuffleDeck() {
+            const deck = [];
+            
+            // Add all cards to deck
+            Object.keys(cardDatabase).forEach(category => {
+                cardDatabase[category].forEach(cardData => {
+                    for (let i = 0; i < cardData.count; i++) {
+                        deck.push({
+                            id: `${category}_${cardData.name}_${i}`,
+                            category: category,
+                            name: cardData.name,
+                            description: cardData.description
+                        });
+                    }
+                });
+            });
+
+            // Shuffle the deck
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            return deck;
+        }
+
+        // Authentication Functions
+        async function loginWithEmail() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showNotification('Please enter both email and password', true);
+                return;
+            }
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('Login successful!');
+            } catch (error) {
+                showNotification(error.message, true);
+            }
+        }
+
+        async function createAccount() {
+            const email = document.getElementById('newEmail').value.trim();
+            const displayName = document.getElementById('displayName').value.trim();
+            const password = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!email || !displayName || !password || !confirmPassword) {
+                showNotification('Please fill in all fields', true);
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match', true);
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', true);
+                return;
+            }
+            
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                await userCredential.user.updateProfile({ displayName: displayName });
+                
+                // Create user profile in database
+                await database.ref(`users/${userCredential.user.uid}`).set({
+                    displayName: displayName,
+                    email: email,
+                    hasHostingPrivilege: false,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                showNotification('Account created successfully!');
+            } catch (error) {
+                showNotification(error.message, true);
+            }
+        }
+
+        async function logout() {
+            try {
+                if (currentGameRef) {
+                    await leaveGame();
+                }
+                await auth.signOut();
+                gameState = {
+                    isHost: false,
+                    gameCode: '',
+                    gameId: '',
+                    players: {},
+                    totalHoles: 18,
+                    currentHole: 1,
+                    currentPar: 3,
+                    playerHand: [],
+                    selectedCards: [],
+                    scores: {},
+                    deck: [],
+                    discardPile: [],
+                    gamePhase: 'lobby',
+                    waitingForScores: {},
+                    gameActivity: []
+                };
+                showNotification('Logged out successfully');
+            } catch (error) {
+                showNotification(error.message, true);
+            }
+        }
+
+        function showLogin() {
+            showScreen('loginScreen');
+        }
+
+        function showCreateAccount() {
+            showScreen('createAccountScreen');
+        }
+
+        function showMainMenu() {
+            updateMainMenuDisplay();
+            showScreen('mainMenuScreen');
+        }
+
+        async function loadUserData() {
+            try {
+                const userRef = database.ref(`users/${currentUser.uid}`);
+                const snapshot = await userRef.once('value');
+                const userData = snapshot.val();
+                
+                if (userData) {
+                    hasHostingPrivilege = userData.hasHostingPrivilege || false;
+                } else {
+                    // Create user profile if it doesn't exist
+                    await userRef.set({
+                        displayName: currentUser.displayName || currentUser.email,
+                        email: currentUser.email,
+                        hasHostingPrivilege: false,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    hasHostingPrivilege = false;
+                }
+                
+                updateMainMenuDisplay();
+                showScreen('mainMenuScreen');
+            } catch (error) {
+                showNotification('Error loading user data: ' + error.message, true);
+            }
+        }
+
+        function updateMainMenuDisplay() {
+            document.getElementById('currentUser').textContent = currentUser.displayName || currentUser.email;
+            document.getElementById('hostingStatus').textContent = hasHostingPrivilege ? '✅ Purchased' : '❌ Not Purchased';
+            document.getElementById('hostButton').disabled = !hasHostingPrivilege;
+        }
+
+        // Store Functions
+        function showStore() {
+            updateStoreDisplay();
+            showScreen('storeScreen');
+        }
+
+        function updateStoreDisplay() {
+            const storeItem = document.getElementById('hostingPrivilege');
+            if (hasHostingPrivilege) {
+                storeItem.classList.add('purchased');
+                storeItem.querySelector('button').textContent = 'Purchased ✅';
+                storeItem.querySelector('button').disabled = true;
+            }
+        }
+
+        async function purchaseHosting() {
+            if (hasHostingPrivilege) {
+                showNotification('You already own hosting privilege!', true);
+                return;
+            }
+            
+            // Simulate purchase process
+            if (confirm('Purchase hosting privilege for $9.99?')) {
+                try {
+                    // Update user data in Firebase
+                    await database.ref(`users/${currentUser.uid}/hasHostingPrivilege`).set(true);
+                    hasHostingPrivilege = true;
+                    updateStoreDisplay();
+                    updateMainMenuDisplay();
+                    showNotification('Hosting privilege purchased successfully!');
+                } catch (error) {
+                    showNotification('Purchase failed: ' + error.message, true);
+                }
+            }
+        }
+
+        // Game Functions
+        function showHostScreen() {
+            showScreen('hostScreen');
+        }
+
+        function showJoinScreen() {
+            showScreen('joinScreen');
+        }
+
+        async function createGame() {
+            const holes = parseInt(document.getElementById('holes').value);
+            
+            if (holes < 1 || holes > 24) {
+                showNotification('Holes must be between 1 and 24', true);
+                return;
+            }
+            
+            try {
+                const gameCode = generateGameCode();
+                const gameRef = database.ref('games').push();
+                const gameId = gameRef.key;
+                
+                const gameData = {
+                    gameCode: gameCode,
+                    hostId: currentUser.uid,
+                    hostName: currentUser.displayName || currentUser.email,
+                    totalHoles: holes,
+                    currentHole: 1,
+                    currentPar: 3,
+                    gamePhase: 'lobby',
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    players: {
+                        [currentUser.uid]: {
+                            name: currentUser.displayName || currentUser.email,
+                            isHost: true,
+                            joinedAt: firebase.database.ServerValue.TIMESTAMP,
+                            hand: [],
+                            scores: []
+                        }
+                    },
+                    deck: shuffleDeck(),
+                    discardPile: [],
+                    gameActivity: [],
+                    waitingForScores: {}
+                };
+                
+                await gameRef.set(gameData);
+                
+                gameState.isHost = true;
+                gameState.gameCode = gameCode;
+                gameState.gameId = gameId;
+                gameState.totalHoles = holes;
+                currentGameRef = gameRef;
+                
+                // Listen for game updates
+                listenToGameUpdates();
+                
+                updateLobbyDisplay();
+                showScreen('lobbyScreen');
+                showNotification(`Game created with code: ${gameCode}`);
+            } catch (error) {
+                showNotification('Error creating game: ' + error.message, true);
+            }
+        }
+
+        async function joinGame() {
+            const gameCode = document.getElementById('gameCode').value.trim().toUpperCase
